@@ -13,10 +13,10 @@
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
   </PropertyGroup>
 
-  <!-- Game and mod-loader DLLs (local references - adjust paths to your install) -->
+  <!-- Game and mod-loader DLLs — override via Directory.Build.props or /p: flags -->
   <PropertyGroup>
-    <FTKGamePath>$(HOME)\..\..\..\Program Files (x86)\Steam\steamapps\common\For The King\FTK_Data\Managed</FTKGamePath>
-    <BepInExPath>$(HOME)\AppData\Roaming\r2modmanPlus-local\ForTheKing\profiles\Default\BepInEx\core</BepInExPath>
+    <FTKGamePath Condition="'$(FTKGamePath)' == ''">$(HOME)\..\..\..\Program Files (x86)\Steam\steamapps\common\For The King\FTK_Data\Managed</FTKGamePath>
+    <BepInExPath Condition="'$(BepInExPath)' == ''">$(HOME)\AppData\Roaming\r2modmanPlus-local\ForTheKing\profiles\Default\BepInEx\core</BepInExPath>
   </PropertyGroup>
 
   <ItemGroup>
