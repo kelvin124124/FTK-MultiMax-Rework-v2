@@ -1,94 +1,54 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using static FTK_MultiMax_Rework_v2.Main;
-using AccessTools = HarmonyLib.AccessTools;
 using HarmonyMethod = HarmonyLib.HarmonyMethod;
+using AccessTools = HarmonyLib.AccessTools;
 
 namespace FTK_MultiMax_Rework_v2.PatchHelpers
 {
-    // Attributes for declarative Harmony patching
-
     [AttributeUsage(AttributeTargets.Class)]
-    public class PatchType : Attribute
-    {
-        public readonly Type type;
-        public PatchType(Type type) { this.type = type; }
-    }
+    public class PatchType : Attribute { public readonly Type type; public PatchType(Type type) { this.type = type; } }
 
     [AttributeUsage(AttributeTargets.Method)]
-    public class PatchMethod : Attribute
-    {
-        public readonly string methodName;
-        public PatchMethod(string methodName) { this.methodName = methodName; }
-    }
+    public class PatchMethod : Attribute { public readonly string methodName; public PatchMethod(string methodName) { this.methodName = methodName; } }
 
     [AttributeUsage(AttributeTargets.Method)]
-    public class PatchPosition : Attribute
-    {
-        public readonly PatchPositions position;
-        public PatchPosition(PatchPositions position) { this.position = position; }
-    }
+    public class PatchPosition : Attribute { public readonly PatchPositions position; public PatchPosition(PatchPositions position) { this.position = position; } }
 
     [AttributeUsage(AttributeTargets.Method)]
-    public class PatchParams : Attribute
-    {
-        public readonly Type[] parameters;
-        public PatchParams(params Type[] parameters) { this.parameters = parameters; }
-    }
+    public class PatchParams : Attribute { public readonly Type[] parameters; public PatchParams(params Type[] parameters) { this.parameters = parameters; } }
 
-    public enum PatchPositions
-    {
-        Prefix,
-        Postfix,
-        Transpiler,
-        Finalizer,
-        ILManipulator
-    }
-
-    // Reflection-based patch discovery and application
+    public enum PatchPositions { Prefix, Postfix, Transpiler, Finalizer, ILManipulator }
 
     public static class PatchUtils
     {
-        public static void PatchClass(Type type)
-        {
-            Type patchedClass = GetAttribute<PatchType>(type).type;
-            Log($"Patching class {patchedClass.Name} with {type.Name}");
+        public static void PatchClass(Type type) {
+            Type target = Attr<PatchType>(type).type;
+            Log($"Patching class {target.Name} with {type.Name}");
 
-            foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Static))
-            {
-                var patchAttr = GetAttribute<PatchMethod>(method);
-                if (patchAttr == null) continue;
+            foreach (var m in type.GetMethods(BindingFlags.Public | BindingFlags.Static)) {
+                var patch = Attr<PatchMethod>(m);
+                if (patch == null) continue;
 
-                var position = GetAttribute<PatchPosition>(method)?.position ?? PatchPositions.Prefix;
-                var parameters = GetAttribute<PatchParams>(method)?.parameters;
-
-                MethodInfo original = AccessTools.Method(patchedClass, patchAttr.methodName, parameters);
-                HarmonyMethod harmony = new HarmonyMethod(method);
-
-                Harmony.Patch(original,
-                    position == PatchPositions.Prefix ? harmony : null,
-                    position == PatchPositions.Postfix ? harmony : null,
-                    position == PatchPositions.Transpiler ? harmony : null,
-                    position == PatchPositions.Finalizer ? harmony : null,
-                    position == PatchPositions.ILManipulator ? harmony : null);
-
-                Log($"    Patched method {patchAttr.methodName} with {method.Name}");
+                var pos = Attr<PatchPosition>(m)?.position ?? PatchPositions.Prefix;
+                var h = new HarmonyMethod(m);
+                Harmony.Patch(AccessTools.Method(target, patch.methodName, Attr<PatchParams>(m)?.parameters),
+                    pos == PatchPositions.Prefix ? h : null,
+                    pos == PatchPositions.Postfix ? h : null,
+                    pos == PatchPositions.Transpiler ? h : null,
+                    pos == PatchPositions.Finalizer ? h : null,
+                    pos == PatchPositions.ILManipulator ? h : null);
+                Log($"    Patched method {patch.methodName} with {m.Name}");
             }
         }
 
-        public static Type[] GetTypesWithAttribute<T>(this Assembly assembly) where T : Attribute
-        {
-            return assembly.GetTypes().Where(t => t.GetCustomAttributes(typeof(T), false).Length > 0).ToArray();
-        }
+        public static Type[] GetTypesWithAttribute<T>(this Assembly asm) where T : Attribute =>
+            asm.GetTypes().Where(t => Attr<T>(t) != null).ToArray();
 
-        private static T? GetAttribute<T>(MemberInfo member) where T : Attribute
-        {
-            var attrs = (T[])member.GetCustomAttributes(typeof(T), false);
-            return attrs.Length > 0 ? attrs[0] : null;
-        }
+        private static T? Attr<T>(MemberInfo m) where T : Attribute =>
+            (T[])m.GetCustomAttributes(typeof(T), false) is T[] a && a.Length > 0 ? a[0] : null;
     }
 }

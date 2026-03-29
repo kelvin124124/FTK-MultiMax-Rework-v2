@@ -10,33 +10,23 @@ namespace FTK_MultiMax_Rework_v2.Patches
         [PatchMethod("Start")]
         [PatchPosition(Prefix)]
         public static void AddMorePlayerSlotsInMenu(ref uiCharacterCreateRoot __instance) {
-            int maxPlayers = GameFlowMC.gMaxPlayers;
-            if (__instance.m_CreateUITargets.Length >= maxPlayers) return;
+            int max = GameFlowMC.gMaxPlayers;
+            if (__instance.m_CreateUITargets.Length >= max) return;
 
-            Transform[] uiTargets = new Transform[maxPlayers];
-            Transform[] camTargets = new Transform[maxPlayers];
+            var cam = SelectScreenCamera.Instance;
+            Vector3 firstPos = cam.m_PlayerTargets[0].position, lastPos = cam.m_PlayerTargets[2].position;
 
-            Vector3 firstCamPos = SelectScreenCamera.Instance.m_PlayerTargets[0].position;
-            Vector3 lastCamPos = SelectScreenCamera.Instance.m_PlayerTargets[2].position;
-
-            for (int i = 0; i < maxPlayers; i++) {
-                if (i < __instance.m_CreateUITargets.Length) {
-                    uiTargets[i] = __instance.m_CreateUITargets[i];
-                    camTargets[i] = SelectScreenCamera.Instance.m_PlayerTargets[i];
-                } else {
-                    uiTargets[i] = Object.Instantiate(uiTargets[i - 1], uiTargets[i - 1].parent);
-                    camTargets[i] = Object.Instantiate(camTargets[i - 1], camTargets[i - 1].parent);
-                }
+            var ui = new Transform[max];
+            var camT = new Transform[max];
+            for (int i = 0; i < max; i++) {
+                ui[i] = i < __instance.m_CreateUITargets.Length ? __instance.m_CreateUITargets[i] : Object.Instantiate(ui[i - 1], ui[i - 1].parent);
+                camT[i] = i < cam.m_PlayerTargets.Length ? cam.m_PlayerTargets[i] : Object.Instantiate(camT[i - 1], camT[i - 1].parent);
+                float t = i / (float)(max - 1);
+                ui[i].GetComponent<RectTransform>().anchoredPosition = new Vector2(Mathf.Lerp(-550f, 550f, t), 129f);
+                camT[i].position = Vector3.Lerp(firstPos, lastPos, t);
             }
-
-            __instance.m_CreateUITargets = uiTargets;
-            SelectScreenCamera.Instance.m_PlayerTargets = camTargets;
-
-            for (int i = 0; i < maxPlayers; i++) {
-                float t = i / (float)(maxPlayers - 1);
-                uiTargets[i].GetComponent<RectTransform>().anchoredPosition = new Vector2(Mathf.Lerp(-550f, 550f, t), 129f);
-                camTargets[i].position = Vector3.Lerp(firstCamPos, lastCamPos, t);
-            }
+            __instance.m_CreateUITargets = ui;
+            cam.m_PlayerTargets = camT;
         }
     }
 }

@@ -12,21 +12,16 @@ namespace FTK_MultiMax_Rework_v2.Patches
         [PatchMethod("Awake")]
         [PatchPosition(Prefix)]
         public static bool GoldAwake(uiGoldMenu __instance) {
-            var goldEntries = Traverse.Create(__instance).Field("m_GoldEntries");
-
             __instance.m_InputFocus = __instance.gameObject.GetComponent<FTKInputFocus>();
             __instance.m_InputFocus.m_InputMode = FTKInput.InputMode.InGameUI;
             __instance.m_InputFocus.m_Cancel = __instance.OnButtonCancel;
 
-            var entries = goldEntries.GetValue<List<uiGoldMenuEntry>>();
+            var entries = Traverse.Create(__instance).Field("m_GoldEntries").GetValue<List<uiGoldMenuEntry>>();
             if (entries == null) return false;
 
             entries.Add(__instance.m_FirstEntry);
-            for (int i = 0; i < GameFlowMC.gMaxPlayers - 2; i++) {
-                var entry = Object.Instantiate(__instance.m_FirstEntry, __instance.m_FirstEntry.transform.parent, false);
-                entries.Add(entry);
-            }
-
+            for (int i = 0; i < GameFlowMC.gMaxPlayers - 2; i++)
+                entries.Add(Object.Instantiate(__instance.m_FirstEntry, __instance.m_FirstEntry.transform.parent, false));
             return false;
         }
     }

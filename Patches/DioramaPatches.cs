@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using FTK_MultiMax_Rework_v2.PatchHelpers;
-using UnityEngine;
 using static FTK_MultiMax_Rework_v2.Main;
 using static FTK_MultiMax_Rework_v2.PatchHelpers.PatchPositions;
+using UnityEngine;
 using Object = UnityEngine.Object;
 
 namespace FTK_MultiMax_Rework_v2.Patches
@@ -15,35 +15,23 @@ namespace FTK_MultiMax_Rework_v2.Patches
         [PatchMethod("_resetTargetQueue")]
         [PatchPosition(Prefix)]
         public static void DummySlide() {
-            foreach (DummyAttackSlide slide in Object.FindObjectsOfType<DummyAttackSlide>()) {
+            foreach (var slide in Object.FindObjectsOfType<DummyAttackSlide>()) {
                 if (slide.m_Distances.Length >= 1000) continue;
-
                 // TODO: 1000 is excessive (default is 3) — find proper upper bound
-                float[] newDistances = new float[1000];
-                Array.Copy(slide.m_Distances, newDistances, slide.m_Distances.Length);
-                slide.m_Distances = newDistances;
+                var expanded = new float[1000];
+                Array.Copy(slide.m_Distances, expanded, slide.m_Distances.Length);
+                slide.m_Distances = expanded;
             }
         }
 
         [PatchMethod("SetupTargets")]
         [PatchPosition(Postfix)]
         public static void SortTargets(ref List<Transform> _targetList) {
-            // Bubble sort player targets into ascending order (1-2-3-4-...)
-            for (int pass = 0; pass < _targetList.Count; pass++) {
-                for (int i = 0; i < _targetList.Count - 1; i++) {
-                    Transform a = _targetList[i], b = _targetList[i + 1];
-                    if (!a.name.Contains("Player ") || !b.name.Contains("Player "))
-                        continue;
-
-                    int idxA = int.Parse(Regex.Match(a.name, "\\d+").Value);
-                    int idxB = int.Parse(Regex.Match(b.name, "\\d+").Value);
-
-                    if (idxA > idxB) {
-                        _targetList[i] = b;
-                        _targetList[i + 1] = a;
-                    }
-                }
-            }
+            for (int pass = 0; pass < _targetList.Count; pass++)
+                for (int i = 0; i < _targetList.Count - 1; i++)
+                    if (_targetList[i].name.Contains("Player ") && _targetList[i + 1].name.Contains("Player ")
+                        && int.Parse(Regex.Match(_targetList[i].name, "\\d+").Value) > int.Parse(Regex.Match(_targetList[i + 1].name, "\\d+").Value))
+                        (_targetList[i], _targetList[i + 1]) = (_targetList[i + 1], _targetList[i]);
         }
     }
 

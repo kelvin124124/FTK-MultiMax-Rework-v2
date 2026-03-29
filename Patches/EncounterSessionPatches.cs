@@ -11,13 +11,9 @@ namespace FTK_MultiMax_Rework_v2.Patches
         [PatchPosition(Prefix)]
         public static void XPModifierPatch(ref FTKPlayerID _recvPlayer, ref int _xp, ref int _gold) {
             if (GameFlowMC.gMaxPlayers <= 3) return;
-
-            CharacterOverworld cow = FTKHub.Instance.GetCharacterOverworldByFID(_recvPlayer);
-            float xpMod = cow.m_CharacterStats.XpModifier;
-            float goldMod = cow.m_CharacterStats.GoldModifier;
-
-            _xp = Mathf.RoundToInt(_xp * xpMod * 1.5f);
-            _gold = Mathf.RoundToInt(_gold * goldMod * 1.5f);
+            var stats = FTKHub.Instance.GetCharacterOverworldByFID(_recvPlayer).m_CharacterStats;
+            _xp = Mathf.RoundToInt(_xp * stats.XpModifier * 1.5f);
+            _gold = Mathf.RoundToInt(_gold * stats.GoldModifier * 1.5f);
         }
     }
 }
