@@ -1,10 +1,6 @@
-﻿using BepInEx.Configuration;
 using BepInEx;
-using System;
-using System.Collections.Generic;
+using BepInEx.Configuration;
 using System.IO;
-using System.Linq;
-using System.Text;
 using UnityEngine;
 
 namespace FTK_MultiMax_Rework_v2 {
@@ -12,27 +8,18 @@ namespace FTK_MultiMax_Rework_v2 {
         public static ConfigEntry<int> MaxPlayersConfig { get; private set; }
 
         public static void InitializeConfig() {
-            string configFilePath = Path.Combine(Paths.ConfigPath, "MultiMaxRework.cfg");
-            var configFile = new ConfigFile(configFilePath, true);
-
-            MaxPlayersConfig = configFile.Bind("General",
-                                               "MaxPlayers",
-                                               5,
-                                               "The max number of players");
-
-            if (!File.Exists(configFilePath)) {
-                configFile.Save();
-            }
+            var configFile = new ConfigFile(Path.Combine(Paths.ConfigPath, "MultiMaxRework.cfg"), true);
+            MaxPlayersConfig = configFile.Bind("General", "MaxPlayers", 5, "The max number of players");
         }
 
         public static void InitializeMaxPlayers() {
-            if (MaxPlayersConfig != null) {
-                GameFlowMC.gMaxPlayers = MaxPlayersConfig.Value;
-                GameFlowMC.gMaxEnemies = GameFlowMC.gMaxPlayers;
-                uiQuickPlayerCreate.Default_Classes = new int[GameFlowMC.gMaxPlayers];
-            } else {
+            if (MaxPlayersConfig == null) {
                 Debug.LogError("maxPlayersConfig is not initialized!");
+                return;
             }
+            GameFlowMC.gMaxPlayers = MaxPlayersConfig.Value;
+            GameFlowMC.gMaxEnemies = MaxPlayersConfig.Value;
+            uiQuickPlayerCreate.Default_Classes = new int[MaxPlayersConfig.Value];
         }
     }
 }

@@ -1,3 +1,5 @@
+Private fork on the already existing mod  
+
 # FTK MultiMax Rework V2
 
 This mod is a patched version (bugfixes and code reorganization) of the mod "FTK MultiMax Rework" by [justedm](https://next.nexusmods.com/profile/justedm?gameId=2887) \

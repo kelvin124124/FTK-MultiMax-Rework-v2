@@ -1,23 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
 namespace FTK_MultiMax_Rework_v2 {
     public static class RoomHandler {
         public static bool CreateRoom(ref GameLogic __instance, string _roomName, bool _isOpen) {
             PhotonNetwork.offlineMode = false;
-            RoomOptions roomOptions = new RoomOptions();
-            TypedLobby typedLobby = new TypedLobby();
-            roomOptions.IsOpen = _isOpen;
-            roomOptions.IsVisible = _isOpen;
-            if (__instance.m_GameMode == GameLogic.GameMode.SinglePlayer) {
-                roomOptions.MaxPlayers = 1;
-            } else {
-                roomOptions.MaxPlayers = (byte)GameFlowMC.gMaxPlayers;
-            }
-            typedLobby.Type = LobbyType.Default;
-            PhotonNetwork.CreateRoom(_roomName, roomOptions, typedLobby);
+            PhotonNetwork.CreateRoom(_roomName,
+                new RoomOptions {
+                    IsOpen = _isOpen,
+                    IsVisible = _isOpen,
+                    MaxPlayers = __instance.m_GameMode == GameLogic.GameMode.SinglePlayer
+                        ? (byte)1 : (byte)GameFlowMC.gMaxPlayers
+                },
+                new TypedLobby { Type = LobbyType.Default });
             return false;
         }
     }
