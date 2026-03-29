@@ -1,23 +1,23 @@
-﻿using FTK_MultiMax_Rework_v2.PatchHelpers;
+using FTK_MultiMax_Rework_v2.PatchHelpers;
 using static FTK_MultiMax_Rework_v2.PatchHelpers.PatchPositions;
 using UnityEngine;
 
-namespace FTK_MultiMax_Rework_v2.Patches {
+namespace FTK_MultiMax_Rework_v2.Patches
+{
     [PatchType(typeof(EncounterSession))]
-    public class EncounterSessionPatches {
+    public class EncounterSessionPatches
+    {
         [PatchMethod("GiveOutLootXPGold")]
         [PatchPosition(Prefix)]
         public static void XPModifierPatch(ref FTKPlayerID _recvPlayer, ref int _xp, ref int _gold) {
+            if (GameFlowMC.gMaxPlayers <= 3) return;
 
-            CharacterOverworld characterOverworldByFid = FTKHub.Instance.GetCharacterOverworldByFID(_recvPlayer);
+            CharacterOverworld cow = FTKHub.Instance.GetCharacterOverworldByFID(_recvPlayer);
+            float xpMod = cow.m_CharacterStats.XpModifier;
+            float goldMod = cow.m_CharacterStats.GoldModifier;
 
-            float xpMod = characterOverworldByFid.m_CharacterStats.XpModifier;
-            float goldMod = characterOverworldByFid.m_CharacterStats.GoldModifier;
-
-            if (GameFlowMC.gMaxPlayers > 3) {
-                _xp = Mathf.RoundToInt((float)((_xp * xpMod) * 1.5));
-                _gold = Mathf.RoundToInt((float)((_gold * goldMod) * 1.5));
-            }
+            _xp = Mathf.RoundToInt(_xp * xpMod * 1.5f);
+            _gold = Mathf.RoundToInt(_gold * goldMod * 1.5f);
         }
     }
 }

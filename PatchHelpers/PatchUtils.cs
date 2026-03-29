@@ -1,126 +1,94 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using JetBrains.Annotations;
-using System.Collections;
 using static FTK_MultiMax_Rework_v2.Main;
 using AccessTools = HarmonyLib.AccessTools;
 using HarmonyMethod = HarmonyLib.HarmonyMethod;
-using static FTK_MultiMax_Rework_v2.PatchHelpers.PatchPositions;
 
 namespace FTK_MultiMax_Rework_v2.PatchHelpers
 {
-    public static class PatchUtils
+    // Attributes for declarative Harmony patching
+
+    [AttributeUsage(AttributeTargets.Class)]
+    public class PatchType : Attribute
     {
-        private static void PatchMethod(Type target, PatchData data) {
-            
-            MethodInfo original = AccessTools.Method(target, data.patchedMethodName, data.parameters);
-            HarmonyMethod method = new HarmonyMethod(data.patchMethod);
-            Harmony.Patch(original,
-                data.position == Prefix ? method : null,
-                data.position == Postfix ? method : null,
-                data.position == Transpiler ? method : null,
-                data.position == Finalizer ? method : null,
-                data.position == ILManipulator ? method : null
-                );
-        }
-
-        private static bool TryGetAttribute<AttrType>(this Type type, out AttrType attribute) where AttrType : Attribute
-        {
-            AttrType[] attributes = (AttrType[]) type.GetCustomAttributes(typeof(AttrType), false);
-
-            if (attributes.Length > 0)
-            {
-                attribute = attributes.First();
-                return true;
-            }
-
-            attribute = null;
-            return false;
-        }
-        
-        private static AttrType? GetAttribute<AttrType>(this Type type) where AttrType : Attribute
-        {
-            return type.TryGetAttribute(out AttrType attribute) ? attribute : null;
-        }
-        
-        private static bool TryGetAttribute<AttrType>(this MethodInfo method, out AttrType attribute) where AttrType : Attribute
-        {
-            AttrType[] attributes = (AttrType[]) method.GetCustomAttributes(typeof(AttrType), false);
-
-            if (attributes.Length > 0)
-            {
-                attribute = attributes.First();
-                return true;
-            }
-
-            attribute = null;
-            return false;
-        }
-        
-        private static AttrType? GetAttribute<AttrType>(this MethodInfo method) where AttrType : Attribute
-        {
-            return method.TryGetAttribute(out AttrType attribute) ? attribute : null;
-        }
-
-        public static Type[] GetTypesWithAttribute<AttrType>(this Assembly assembly) where AttrType : Attribute
-        {
-            return assembly.GetTypes().Where((type) => type.TryGetAttribute(out AttrType attribute)).ToArray();
-        }
-
-        private static List<PatchData> GetPatchMethods(this Type type)
-        {
-            MethodInfo[] allMethods = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
-
-            List<PatchData> result = new();
-
-            foreach (var method in allMethods)
-            {
-                if (!method.TryGetAttribute(out PatchMethod patchMethod))
-                    continue;
-
-                PatchParams? patchParams = method.GetAttribute<PatchParams>();
-
-                PatchPositions position = Prefix;
-                if (method.TryGetAttribute(out PatchPosition patchPosition))
-                    position = patchPosition.position;
-                
-                result.Add(new PatchData(patchMethod.methodName, position, method, patchParams?.parameters));
-            }
-
-            return result;
-        }
-
-        public static void PatchClass(Type type)
-        {
-            PatchType patchType = type.GetAttribute<PatchType>();
-            Type patchedClass = patchType.type;
-            Log($"Patching class {patchedClass.Name} with {type.Name}");
-            
-            foreach (PatchData patch in type.GetPatchMethods())
-            {
-                PatchMethod(patchedClass, patch);
-                Log($"    Patched method {patch.patchedMethodName} with {patch.patchMethod.Name}");
-            }
-        }
+        public readonly Type type;
+        public PatchType(Type type) { this.type = type; }
     }
 
-    struct PatchData
+    [AttributeUsage(AttributeTargets.Method)]
+    public class PatchMethod : Attribute
     {
-        public PatchData(string patchedMethodName, PatchPositions position, MethodInfo patchMethod, Type[]? parameters)
+        public readonly string methodName;
+        public PatchMethod(string methodName) { this.methodName = methodName; }
+    }
+
+    [AttributeUsage(AttributeTargets.Method)]
+    public class PatchPosition : Attribute
+    {
+        public readonly PatchPositions position;
+        public PatchPosition(PatchPositions position) { this.position = position; }
+    }
+
+    [AttributeUsage(AttributeTargets.Method)]
+    public class PatchParams : Attribute
+    {
+        public readonly Type[] parameters;
+        public PatchParams(params Type[] parameters) { this.parameters = parameters; }
+    }
+
+    public enum PatchPositions
+    {
+        Prefix,
+        Postfix,
+        Transpiler,
+        Finalizer,
+        ILManipulator
+    }
+
+    // Reflection-based patch discovery and application
+
+    public static class PatchUtils
+    {
+        public static void PatchClass(Type type)
         {
-            this.patchedMethodName = patchedMethodName;
-            this.patchMethod = patchMethod;
-            this.parameters = parameters;
-            this.position = position;
+            Type patchedClass = GetAttribute<PatchType>(type).type;
+            Log($"Patching class {patchedClass.Name} with {type.Name}");
+
+            foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Static))
+            {
+                var patchAttr = GetAttribute<PatchMethod>(method);
+                if (patchAttr == null) continue;
+
+                var position = GetAttribute<PatchPosition>(method)?.position ?? PatchPositions.Prefix;
+                var parameters = GetAttribute<PatchParams>(method)?.parameters;
+
+                MethodInfo original = AccessTools.Method(patchedClass, patchAttr.methodName, parameters);
+                HarmonyMethod harmony = new HarmonyMethod(method);
+
+                Harmony.Patch(original,
+                    position == PatchPositions.Prefix ? harmony : null,
+                    position == PatchPositions.Postfix ? harmony : null,
+                    position == PatchPositions.Transpiler ? harmony : null,
+                    position == PatchPositions.Finalizer ? harmony : null,
+                    position == PatchPositions.ILManipulator ? harmony : null);
+
+                Log($"    Patched method {patchAttr.methodName} with {method.Name}");
+            }
         }
 
-        public string patchedMethodName;
-        public MethodInfo patchMethod;
-        public Type[]? parameters;
-        public PatchPositions position;
+        public static Type[] GetTypesWithAttribute<T>(this Assembly assembly) where T : Attribute
+        {
+            return assembly.GetTypes().Where(t => t.GetCustomAttributes(typeof(T), false).Length > 0).ToArray();
+        }
+
+        private static T? GetAttribute<T>(MemberInfo member) where T : Attribute
+        {
+            var attrs = (T[])member.GetCustomAttributes(typeof(T), false);
+            return attrs.Length > 0 ? attrs[0] : null;
+        }
     }
 }
