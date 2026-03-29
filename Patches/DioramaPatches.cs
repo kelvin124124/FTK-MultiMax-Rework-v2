@@ -30,8 +30,11 @@ namespace FTK_MultiMax_Rework_v2.Patches
             for (int pass = 0; pass < _targetList.Count; pass++)
                 for (int i = 0; i < _targetList.Count - 1; i++)
                     if (_targetList[i].name.Contains("Player ") && _targetList[i + 1].name.Contains("Player ")
-                        && int.Parse(Regex.Match(_targetList[i].name, "\\d+").Value) > int.Parse(Regex.Match(_targetList[i + 1].name, "\\d+").Value))
-                        (_targetList[i], _targetList[i + 1]) = (_targetList[i + 1], _targetList[i]);
+                        && int.Parse(Regex.Match(_targetList[i].name, "\\d+").Value) > int.Parse(Regex.Match(_targetList[i + 1].name, "\\d+").Value)) {
+                        var tmp = _targetList[i];
+                        _targetList[i] = _targetList[i + 1];
+                        _targetList[i + 1] = tmp;
+                    }
         }
     }
 
